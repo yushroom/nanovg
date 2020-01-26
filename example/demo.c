@@ -2,14 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#ifdef NANOVG_GLEW
-#  include <GL/glew.h>
-#endif
-#include <GLFW/glfw3.h>
 #include "nanovg.h"
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-
 
 #ifdef _MSC_VER
 #define snprintf _snprintf
@@ -23,6 +16,10 @@
 #define ICON_CHECK 0x2713
 #define ICON_LOGIN 0xE740
 #define ICON_TRASH 0xE729
+
+#ifndef EXAMPLE_DIR
+#define EXAMPLE_DIR "../example/"
+#endif
 
 //static float minf(float a, float b) { return a < b ? a : b; }
 static float maxf(float a, float b) { return a > b ? a : b; }
@@ -811,7 +808,7 @@ int loadDemoData(NVGcontext* vg, DemoData* data)
 
 	for (i = 0; i < 12; i++) {
 		char file[128];
-		snprintf(file, 128, "../example/images/image%d.jpg", i+1);
+		snprintf(file, 128, EXAMPLE_DIR "images/image%d.jpg", i+1);
 		data->images[i] = nvgCreateImage(vg, file, 0);
 		if (data->images[i] == 0) {
 			printf("Could not load %s.\n", file);
@@ -819,22 +816,22 @@ int loadDemoData(NVGcontext* vg, DemoData* data)
 		}
 	}
 
-	data->fontIcons = nvgCreateFont(vg, "icons", "../example/entypo.ttf");
+	data->fontIcons = nvgCreateFont(vg, "icons", EXAMPLE_DIR "entypo.ttf");
 	if (data->fontIcons == -1) {
 		printf("Could not add font icons.\n");
 		return -1;
 	}
-	data->fontNormal = nvgCreateFont(vg, "sans", "../example/Roboto-Regular.ttf");
+	data->fontNormal = nvgCreateFont(vg, "sans", EXAMPLE_DIR "Roboto-Regular.ttf");
 	if (data->fontNormal == -1) {
 		printf("Could not add font italic.\n");
 		return -1;
 	}
-	data->fontBold = nvgCreateFont(vg, "sans-bold", "../example/Roboto-Bold.ttf");
+	data->fontBold = nvgCreateFont(vg, "sans-bold", EXAMPLE_DIR "Roboto-Bold.ttf");
 	if (data->fontBold == -1) {
 		printf("Could not add font bold.\n");
 		return -1;
 	}
-	data->fontEmoji = nvgCreateFont(vg, "emoji", "../example/NotoEmoji-Regular.ttf");
+	data->fontEmoji = nvgCreateFont(vg, "emoji", EXAMPLE_DIR "NotoEmoji-Regular.ttf");
 	if (data->fontEmoji == -1) {
 		printf("Could not add font emoji.\n");
 		return -1;
@@ -1121,106 +1118,4 @@ void renderDemo(NVGcontext* vg, float mx, float my, float width, float height,
 	drawThumbnails(vg, 365, popy-30, 160, 300, data->images, 12, t);
 
 	nvgRestore(vg);
-}
-
-static int mini(int a, int b) { return a < b ? a : b; }
-
-static void unpremultiplyAlpha(unsigned char* image, int w, int h, int stride)
-{
-	int x,y;
-
-	// Unpremultiply
-	for (y = 0; y < h; y++) {
-		unsigned char *row = &image[y*stride];
-		for (x = 0; x < w; x++) {
-			int r = row[0], g = row[1], b = row[2], a = row[3];
-			if (a != 0) {
-				row[0] = (int)mini(r*255/a, 255);
-				row[1] = (int)mini(g*255/a, 255);
-				row[2] = (int)mini(b*255/a, 255);
-			}
-			row += 4;
-		}
-	}
-
-	// Defringe
-	for (y = 0; y < h; y++) {
-		unsigned char *row = &image[y*stride];
-		for (x = 0; x < w; x++) {
-			int r = 0, g = 0, b = 0, a = row[3], n = 0;
-			if (a == 0) {
-				if (x-1 > 0 && row[-1] != 0) {
-					r += row[-4];
-					g += row[-3];
-					b += row[-2];
-					n++;
-				}
-				if (x+1 < w && row[7] != 0) {
-					r += row[4];
-					g += row[5];
-					b += row[6];
-					n++;
-				}
-				if (y-1 > 0 && row[-stride+3] != 0) {
-					r += row[-stride];
-					g += row[-stride+1];
-					b += row[-stride+2];
-					n++;
-				}
-				if (y+1 < h && row[stride+3] != 0) {
-					r += row[stride];
-					g += row[stride+1];
-					b += row[stride+2];
-					n++;
-				}
-				if (n > 0) {
-					row[0] = r/n;
-					row[1] = g/n;
-					row[2] = b/n;
-				}
-			}
-			row += 4;
-		}
-	}
-}
-
-static void setAlpha(unsigned char* image, int w, int h, int stride, unsigned char a)
-{
-	int x, y;
-	for (y = 0; y < h; y++) {
-		unsigned char* row = &image[y*stride];
-		for (x = 0; x < w; x++)
-			row[x*4+3] = a;
-	}
-}
-
-static void flipHorizontal(unsigned char* image, int w, int h, int stride)
-{
-	int i = 0, j = h-1, k;
-	while (i < j) {
-		unsigned char* ri = &image[i * stride];
-		unsigned char* rj = &image[j * stride];
-		for (k = 0; k < w*4; k++) {
-			unsigned char t = ri[k];
-			ri[k] = rj[k];
-			rj[k] = t;
-		}
-		i++;
-		j--;
-	}
-}
-
-void saveScreenShot(int w, int h, int premult, const char* name)
-{
-	unsigned char* image = (unsigned char*)malloc(w*h*4);
-	if (image == NULL)
-		return;
-	glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, image);
-	if (premult)
-		unpremultiplyAlpha(image, w, h, w*4);
-	else
-		setAlpha(image, w, h, w*4, 255);
-	flipHorizontal(image, w, h, w*4);
- 	stbi_write_png(name, w, h, 4, image, w*4);
- 	free(image);
 }
