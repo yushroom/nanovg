@@ -42,6 +42,8 @@ void errorcb(int error, const char* desc)
 int blowup = 0;
 int screenshot = 0;
 int premult = 0;
+extern int g_id;
+extern int g_pickedID;
 
 static void key(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -158,6 +160,7 @@ int main()
 
 		nvgBeginFrame(vg, winWidth, winHeight, pxRatio);
 
+		g_id = 0;
 		renderDemo(vg, mx,my, winWidth,winHeight, t, blowup, &data);
 
 		renderGraph(vg, 5,5, &fps);
@@ -165,6 +168,7 @@ int main()
 		if (gpuTimer.supported)
 			renderGraph(vg, 5+200+5+200+5,5, &gpuGraph);
 
+		g_pickedID = nvgHitTest(vg, mx, my, NVG_TEST_ALL);
 		nvgEndFrame(vg);
 
 		// Measure the CPU time taken excluding swap buffers (as the swap may wait for GPU)

@@ -21,6 +21,9 @@
 #define EXAMPLE_DIR "../example/"
 #endif
 
+int g_id = 0;
+int g_pickedID = -1;
+
 //static float minf(float a, float b) { return a < b ? a : b; }
 static float maxf(float a, float b) { return a > b ? a : b; }
 //static float absf(float a) { return a >= 0.0f ? a : -a; }
@@ -277,11 +280,17 @@ void drawButton(NVGcontext* vg, int preicon, const char* text, float x, float y,
 	nvgBeginPath(vg);
 	nvgRoundedRect(vg, x+1,y+1, w-2,h-2, cornerRadius-1);
 	if (!isBlack(col)) {
+		if (g_pickedID == g_id) {
+			col.r *= 0.9f;
+			col.g *= 0.9f;
+			col.b *= 0.9f;
+		}
 		nvgFillColor(vg, col);
 		nvgFill(vg);
 	}
 	nvgFillPaint(vg, bg);
 	nvgFill(vg);
+	nvgFillHitRegion(vg, g_id++);
 
 	nvgBeginPath(vg);
 	nvgRoundedRect(vg, x+0.5f,y+0.5f, w-1,h-1, cornerRadius-0.5f);
